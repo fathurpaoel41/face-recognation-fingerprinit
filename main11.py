@@ -236,6 +236,8 @@ def stopService():
     statusFingerEvent.set()
     print("stop Service")
     bot.send_message("5499814195", "Stop Service")
+    if varStopService => 2:
+        checkFile()
     
 # Fungsi untuk mengambil gambar data
 def ambil_gambar(nama):
@@ -387,7 +389,6 @@ def authentication():
     
     
     while not statusFingerEvent.is_set():
-        print("masuk while")
         if detectFingerStatus is True:
             print("masuk detect finger True")
             break
