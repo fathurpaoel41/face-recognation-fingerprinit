@@ -53,7 +53,6 @@ def checkFile():
     detectFingerStatus = False
     if os.path.exists("training.xml") and os.path.exists("data.json") and os.path.exists("dataJari.json"):
         print("file ada")
-        lcdDisplay.clear()
         lcdDisplay.set("Initiate",1)
         lcdDisplay.set("Success",2)
         time.sleep(5)
@@ -236,7 +235,7 @@ def stopService():
     statusFingerEvent.set()
     print("stop Service")
     bot.send_message("5499814195", "Stop Service")
-    if varStopService => 2:
+    if varStopService > 1:
         checkFile()
     
 # Fungsi untuk mengambil gambar data
