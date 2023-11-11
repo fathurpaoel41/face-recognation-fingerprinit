@@ -53,20 +53,20 @@ def checkFile():
     detectFingerStatus = False
     if os.path.exists("training.xml") and os.path.exists("data.json") and os.path.exists("dataJari.json"):
         print("file ada")
-        lcdDisplay.set("Initiate",1)
-        lcdDisplay.set("Success",2)
+        lcdDisplay.set("Initiate       ",1)
+        lcdDisplay.set("Success         ",2)
         time.sleep(5)
         authentication()
     else:
-        lcdDisplay.set("Initiate",1)
-        lcdDisplay.set("Error",2)
+        lcdDisplay.set("Initiate        ",1)
+        lcdDisplay.set("Error       ",2)
         print("File Tidak ada")
 
 #menambahkan data sidik jari
 def enroll_finger(nama):
     print("masuk enroll finger")
-    lcdDisplay.set("Add ",1)
-    lcdDisplay.set("Finger",2)
+    lcdDisplay.set("Add             ",1)
+    lcdDisplay.set("Finger          ",2)
     time.sleep(3)
     """Take a 2 finger images and template it, then store in specified location"""
     location = random.randint(1, 254)  # Menggunakan bilangan bulat acak
@@ -88,19 +88,19 @@ def enroll_finger(nama):
 
     for fingerimg in range(1, 3):
         if fingerimg == 1:
-            lcdDisplay.set("Place ",1)
-            lcdDisplay.set("Finger",2)
+            lcdDisplay.set("Place           ",1)
+            lcdDisplay.set("Finger          ",2)
             print("Place finger on sensor...", end="")
         else:
-            lcdDisplay.set("Place ",1)
-            lcdDisplay.set("Finger Again",2)
+            lcdDisplay.set("Place           ",1)
+            lcdDisplay.set("Finger Again    ",2)
             print("Place same finger again...", end="")
 
         while True:
             i = finger.get_image()
             if i == adafruit_fingerprint.OK:
-                lcdDisplay.set("Finger ",1)
-                lcdDisplay.set("Taken",2)
+                lcdDisplay.set("Finger          ",1)
+                lcdDisplay.set("Taken           ",2)
                 print("Image taken")
                 time.sleep(2)
                 break
@@ -108,8 +108,8 @@ def enroll_finger(nama):
                 print(".", end="")
             elif i == adafruit_fingerprint.IMAGEFAIL:
                 print("Imaging error")
-                lcdDisplay.set("Image ",1)
-                lcdDisplay.set("Error",2)
+                lcdDisplay.set("Image           ",1)
+                lcdDisplay.set("Error           ",2)
                 time.sleep(2)
                 return False
 
@@ -130,51 +130,51 @@ def enroll_finger(nama):
 
         if fingerimg == 1:
             print("Remove finger")
-            lcdDisplay.set("Remove",1)
-            lcdDisplay.set("Finger",2)
+            lcdDisplay.set("Remove          ",1)
+            lcdDisplay.set("Finger          ",2)
             time.sleep(1)
             while i != adafruit_fingerprint.NOFINGER:
                 i = finger.get_image()
 
-    lcdDisplay.set("Creating ",1)
-    lcdDisplay.set("Model",2)
+    lcdDisplay.set("Creating         ",1)
+    lcdDisplay.set("Model            ",2)
     print("Creating model...", end="")
     time.sleep(2)
     i = finger.create_model()
     if i == adafruit_fingerprint.OK:
         print("Created")
-        lcdDisplay.set("Image ",1)
-        lcdDisplay.set("Create",2)
+        lcdDisplay.set("Image           ",1)
+        lcdDisplay.set("Create          ",2)
         time.sleep(2)
     else:
         if i == adafruit_fingerprint.ENROLLMISMATCH:
-            lcdDisplay.set("Image ",1)
-            lcdDisplay.set("not Match",2)
+            lcdDisplay.set("Image           ",1)
+            lcdDisplay.set("not Match       ",2)
             print("Prints did not match")
         else:
-            lcdDisplay.set("Error ",1)
-            lcdDisplay.set("-",2)
+            lcdDisplay.set("Error           ",1)
+            lcdDisplay.set("-               ",2)
             print("Other error")
         return False
 
     print(f"Storing model at ID #{location}...", end="")
     i = finger.store_model(location)
     if i == adafruit_fingerprint.OK:
-        lcdDisplay.set("Finger",1)
-        lcdDisplay.set("Stored",2)
+        lcdDisplay.set("Finger              ",1)
+        lcdDisplay.set("Stored              ",2)
         print("Stored")
     else:
         if i == adafruit_fingerprint.BADLOCATION:
-            lcdDisplay.set("Error",1)
-            lcdDisplay.set("Store",2)
+            lcdDisplay.set("Error            ",1)
+            lcdDisplay.set("Store             ",2)
             print("Bad storage location")
         elif i == adafruit_fingerprint.FLASHERR:
-            lcdDisplay.set("Error",1)
-            lcdDisplay.set("Store",2)
+            lcdDisplay.set("Error             ",1)
+            lcdDisplay.set("Store            ",2)
             print("Flash storage error")
         else:
-            lcdDisplay.set("Error",1)
-            lcdDisplay.set("Store",2)
+            lcdDisplay.set("Error            ",1)
+            lcdDisplay.set("Store            ",2)
             print("Other error")
         return False
 
@@ -191,8 +191,8 @@ def get_fingerprint():
             pass
         print("Templating...")
         if finger.image_2_tz(1) != adafruit_fingerprint.OK:
-            lcdDisplay.set("Finger is not",1)
-            lcdDisplay.set("Registered",2)
+            lcdDisplay.set("Finger is not    ",1)
+            lcdDisplay.set("Registered       ",2)
             print("Citra Sidik Jari berantakan")
             bot.send_message("5499814195", "Jari tidak terdaftar")
             detectFingerStatus = False
@@ -204,19 +204,19 @@ def get_fingerprint():
             if not statusFingerEvent.is_set():  # Cek status thread
                 print("Sidik jari tidak terdaftar")
                 bot.send_message("5499814195", "Jari tidak terdaftar")
-                lcdDisplay.set("Finger is not",1)
-                lcdDisplay.set("Registered",2)
+                lcdDisplay.set("Finger is not    ",1)
+                lcdDisplay.set("Registered       ",2)
                 get_fingerprint()
             return False
         namaJari = searchDataJari(finger.finger_id)
         print("Sidik jari terdeteksi")
         print("ID:", finger.finger_id, "Confidence:", finger.confidence)
         bot.send_message("5499814195", "atas nama "+str(namaJari)+" masuk menggunakan Fingerprint")
-        lcdDisplay.set("Finger is",1)
-        lcdDisplay.set("Registered",2)
+        lcdDisplay.set("Finger is       ",1)
+        lcdDisplay.set("Registered      ",2)
         time.sleep(2)
-        lcdDisplay.set("Authentication",1)
-        lcdDisplay.set("Success",2)
+        lcdDisplay.set("Authentication   ",1)
+        lcdDisplay.set("Success          ",2)
         detectFingerStatus = True
         statusFingerEvent.set()
         threading.Thread(target=relayAction).start()
@@ -241,8 +241,8 @@ def stopService():
 # Fungsi untuk mengambil gambar data
 def ambil_gambar(nama):
     print("masuk fungsi ambil gambar")
-    lcdDisplay.set("Take Picture",1)
-    lcdDisplay.set("Success",2)
+    lcdDisplay.set("Take Picture     ",1)
+    lcdDisplay.set("Success          ",2)
     camera = 0
     video = cv2.VideoCapture(camera)
 
@@ -289,7 +289,7 @@ def ambil_gambar(nama):
             cv2.imwrite('DataSet/User.' + str(id) + '.' + str(a) + '.jpg', wajah_cropped)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             print("masuk")
-            lcdDisplay.set("Take Picture",1)
+            lcdDisplay.set("Take Picture       ",1)
             lcdDisplay.set(str(a),2)
 
         cv2.imshow("Face Recognition", frame)
@@ -371,8 +371,8 @@ def authentication():
     
     global detectFingerStatus
     print("masuk function authentication")
-    lcdDisplay.set("Authentication",1)
-    lcdDisplay.set("Ready",2)
+    lcdDisplay.set("Authentication  ",1)
+    lcdDisplay.set("Ready           ",2)
     camera = 0
     video = cv2.VideoCapture(camera)
     faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -425,8 +425,8 @@ def authentication():
                         status = True
                         if not relay_status:
                             statusFingerEvent.set()
-                            lcdDisplay.set("Authentication",1)
-                            lcdDisplay.set("Success",2)
+                            lcdDisplay.set("Authentication  ",1)
+                            lcdDisplay.set("Success         ",2)
                             threading.Thread(target=relayAction).start()
                             detectFingerStatus = True
                             varStopService = 0
@@ -498,8 +498,8 @@ def start_service_command(message):
     global detectFingerStatus
     detectFingerStatus = True
     statusFingerEvent.set()
-    lcdDisplay.set("Stop",1)
-    lcdDisplay.set("Service",2)
+    lcdDisplay.set("Stop             ",1)
+    lcdDisplay.set("Service          ",2)
 
 @bot.message_handler(commands=['ambilGambar'])
 def ambil_gambar_command(message):
