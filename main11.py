@@ -71,6 +71,7 @@ def checkFile():
         
 def check_id(new_name):
     global GLOBAL_ADD_NEW_ID_USER
+    global GLOBAL_ADD_NEW_NAME_USER
     data = None
     with open('data.json', 'r') as f:
         data = json.load(f)
@@ -87,6 +88,7 @@ def check_id(new_name):
 
     # Mengembalikan data yang sudah diperbarui
     GLOBAL_ADD_NEW_ID_USER = new_id
+    GLOBAL_ADD_NEW_NAME_USER = new_name
     enroll_finger()
     return new_id
 
@@ -339,7 +341,7 @@ def ambil_gambar():
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             print("masuk")
             lcdDisplay.set("Take Picture       ",1)
-            lcdDisplay.set(str(a),2)
+            lcdDisplay.set(str(a)+"             ",2)
 
         cv2.imshow("Face Recognition", frame)
 
