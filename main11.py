@@ -47,6 +47,7 @@ GLOBAL_AUTH_FACE = False
 GLOBAL_STOP_LOOP = False
 GLOBAL_ADD_NEW_ID_USER = None
 GLOBAL_ADD_NEW_NAME_USER = None
+GLOBAL_DATA_JSON = None
 
 def checkFile():
     global GLOBAL_AUTH_FINGER
@@ -86,10 +87,16 @@ def check_id(new_name):
 
     # Mengembalikan data yang sudah diperbarui
     GLOBAL_ADD_NEW_ID_USER = new_id
+    enroll_finger()
     return new_id
 
 def add_new_data():
     # Menambahkan data baru
+    global GLOBAL_ADD_NEW_ID_USER
+    data = None
+    with open('data.json', 'r') as f:
+        data = json.load(f)
+        
     new_data = {
         "id": GLOBAL_ADD_NEW_ID_USER,
         "nama": GLOBAL_ADD_NEW_NAME_USER
@@ -568,8 +575,8 @@ def start_service_command(message):
     lcdDisplay.set("Service         ",2)
     print("stopService uy")
     
-@bot.message_handler(commands=['ambilGambar'])
-def ambil_gambar_command(message):
+@bot.message_handler(commands=['addUser'])
+def add_user_command(message):
     bot.reply_to(message, "Silakan masukkan nama Anda:")
     bot.register_next_step_handler(message, handle_nama_input)
 
