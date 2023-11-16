@@ -40,11 +40,11 @@ GPIO.setup(push_button, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 GPIO.add_event_detect(vibration_pin, GPIO.BOTH, bouncetime=300)
 
 #global variable
-global GLOBAL_ID_USER_FINGER = None 
-global GLOBAL_ID_USER_FACE = None
-global GLOBAL_AUTH_FINGER = False
-global GLOBAL_AUTH_FACE = False
-global GLOBAL_STOP_LOOP = False
+GLOBAL_ID_USER_FINGER = None 
+GLOBAL_ID_USER_FACE = None
+GLOBAL_AUTH_FINGER = False
+GLOBAL_AUTH_FACE = False
+GLOBAL_STOP_LOOP = False
 
 def checkFile():
     global GLOBAL_AUTH_FINGER
@@ -188,6 +188,11 @@ def get_fingerprint():
     global GLOBAL_ID_USER_FINGER
     global GLOBAL_AUTH_FINGER
     global GLOBAL_STOP_LOOP
+    status = False
+    relay_status = False
+    statusVibration = False
+    vibration_start_time = 0
+    
     try:
         """Get a finger print image, template it, and see if it matches!"""
         print("Waiting for image...")
