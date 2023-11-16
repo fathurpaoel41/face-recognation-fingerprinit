@@ -398,7 +398,7 @@ def searchDataMuka(id):
         return False 
 
 def searchDataJari(id):
-    with open('dataJari.json', 'r') as file:
+    with open('data.json', 'r') as file:
         data = json.load(file)
 
     # Iterasi melalui elemen-elemen dalam JSON
@@ -582,7 +582,7 @@ def add_user_command(message):
 
 def handle_nama_input(message):
     nama = message.text
-    ambil_gambar(nama)
+    check_id(nama)
 
 @bot.message_handler(commands=['scanWajah'])
 def ambil_gambar_command(message):
