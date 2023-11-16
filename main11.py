@@ -93,6 +93,7 @@ def check_id(new_name):
 def add_new_data():
     # Menambahkan data baru
     global GLOBAL_ADD_NEW_ID_USER
+    global GLOBAL_ADD_NEW_NAME_USER
     data = None
     with open('data.json', 'r') as f:
         data = json.load(f)
