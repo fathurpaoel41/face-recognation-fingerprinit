@@ -196,7 +196,7 @@ def get_fingerprint():
     try:
         """Get a finger print image, template it, and see if it matches!"""
         print("Waiting for image...")
-        while finger.get_image() != adafruit_fingerprint.OK or GLOBAL_STOP_LOOP:
+        while finger.get_image() != adafruit_fingerprint.OK or not GLOBAL_STOP_LOOP:
             
             #untuk button buka
             inputValue = GPIO.input(21)
@@ -359,7 +359,6 @@ def relayAction():
     time.sleep(10)
     GPIO.output(relay_pin, GPIO.LOW)
     print("udahan relay")
-    authentication()
     
 def searchDataMuka(id):
     with open('data.json', 'r') as file:
