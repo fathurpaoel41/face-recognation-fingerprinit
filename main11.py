@@ -196,7 +196,9 @@ def get_fingerprint():
     try:
         """Get a finger print image, template it, and see if it matches!"""
         print("Waiting for image...")
-        while finger.get_image() != adafruit_fingerprint.OK or not GLOBAL_STOP_LOOP:
+        while finger.get_image() != adafruit_fingerprint.OK or GLOBAL_STOP_LOOP is not True:
+            if GLOBAL_STOP_LOOP:
+                break
             
             #untuk button buka
             inputValue = GPIO.input(21)
@@ -247,19 +249,20 @@ def get_fingerprint():
             lcdDisplay.set("Finger is not    ",1)
             lcdDisplay.set("Registered       ",2)
             get_fingerprint()
-                
-        namaJari = searchDataJari(finger.finger_id)
-        print("Sidik jari terdeteksi")
-        print("ID:", finger.finger_id, "Confidence:", finger.confidence)
-        bot.send_message("5499814195", "atas nama "+str(namaJari)+" masuk menggunakan Fingerprint")
-        lcdDisplay.set("Finger is       ",1)
-        lcdDisplay.set("Registered      ",2)
-        time.sleep(1.5)
-        lcdDisplay.set("Authentication   ",1)
-        lcdDisplay.set("Success          ",2)
-        GLOBAL_AUTH_FINGER = True
-        GLOBAL_ID_USER_FINGER = int(finger.finger_id)
-        return True
+        
+        if not GLOBAL_STOP_LOOP:        
+            namaJari = searchDataJari(finger.finger_id)
+            print("Sidik jari terdeteksi")
+            print("ID:", finger.finger_id, "Confidence:", finger.confidence)
+            bot.send_message("5499814195", "atas nama "+str(namaJari)+" masuk menggunakan Fingerprint")
+            lcdDisplay.set("Finger is       ",1)
+            lcdDisplay.set("Registered      ",2)
+            time.sleep(1.5)
+            lcdDisplay.set("Authentication   ",1)
+            lcdDisplay.set("Success          ",2)
+            GLOBAL_AUTH_FINGER = True
+            GLOBAL_ID_USER_FINGER = int(finger.finger_id)
+            return True
     except Exception as e:
         bot.send_message("5499814195", "Terjadi Error DI get_fingerprint")
         print("error = "+str(e))
@@ -501,7 +504,7 @@ def authentication():
     lcdDisplay.set("Authentication  ",1)
     lcdDisplay.set("Ready           ",2)
     
-    if GLOBAL_STOP_LOOP is not True:
+    if not GLOBAL_STOP_LOOP:
         # Membuat dan memulai thread untuk get_fingerprint
         fingerprint_thread = threading.Thread(target=get_fingerprint)
         fingerprint_thread.start()
@@ -509,7 +512,7 @@ def authentication():
     # Menunggu sampai thread get_fingerprint selesai
     fingerprint_thread.join()
 
-    if GLOBAL_STOP_LOOP is not True:
+    if not GLOBAL_STOP_LOOP:
         # Setelah thread get_fingerprint selesai, lanjut ke authCamera
         auth_camera_thread  = threading.Thread(target=authCamera)
         auth_camera_thread.start()
@@ -530,6 +533,7 @@ def start_service_command(message):
 def start_service_command(message):
     global GLOBAL_STOP_LOOP
     GLOBAL_STOP_LOOP = True
+    print("stopService uy")
     
 @bot.message_handler(commands=['ambilGambar'])
 def ambil_gambar_command(message):
