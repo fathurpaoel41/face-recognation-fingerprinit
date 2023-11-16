@@ -45,6 +45,8 @@ GLOBAL_ID_USER_FACE = None
 GLOBAL_AUTH_FINGER = False
 GLOBAL_AUTH_FACE = False
 GLOBAL_STOP_LOOP = False
+GLOBAL_ADD_NEW_ID_USER = None
+GLOBAL_ADD_NEW_NAME_USER = None
 
 def checkFile():
     global GLOBAL_AUTH_FINGER
@@ -59,36 +61,54 @@ def checkFile():
         print("file ada")
         lcdDisplay.set("Initiate       ",1)
         lcdDisplay.set("Success         ",2)
-        time.sleep(5)
+        time.sleep(1)
         authentication()
     else:
         lcdDisplay.set("Initiate        ",1)
         lcdDisplay.set("Error       ",2)
         print("File Tidak ada")
+        
+def check_id(new_name):
+    global GLOBAL_ADD_NEW_ID_USER
+    data = None
+    with open('data.json', 'r') as f:
+        data = json.load(f)
+    # Membuat ID acak
+    new_id = random.randint(1, 200)
+
+    # Mengecek apakah ID atau nama sudah ada dalam data
+    for item in data:
+        while item['id'] == new_id:
+            new_id = random.randint(1, 200)
+        if item['nama'].lower() == new_name.lower():
+            bot.send_message("5499814195", "nama "+str(new_name)+" sudah terdaftar")
+            return "Nama yang diinput sudah ada"
+
+    # Mengembalikan data yang sudah diperbarui
+    GLOBAL_ADD_NEW_ID_USER = new_id
+    return new_id
+
+def add_new_data():
+    # Menambahkan data baru
+    new_data = {
+        "id": GLOBAL_ADD_NEW_ID_USER,
+        "nama": GLOBAL_ADD_NEW_NAME_USER
+    }
+    data.append(new_data)
+    with open('data.json', 'w') as file:
+        json.dump(data, file, indent=4)
+
+    print("Data berhasil ditambahkan ke JSON.")
+
 
 #menambahkan data sidik jari
-def enroll_finger(nama):
+def enroll_finger():
     print("masuk enroll finger")
     lcdDisplay.set("Add             ",1)
     lcdDisplay.set("Finger          ",2)
     time.sleep(3)
     """Take a 2 finger images and template it, then store in specified location"""
-    location = random.randint(1, 254)  # Menggunakan bilangan bulat acak
-
-    # menginput data json baru
-    with open('dataJari.json', 'r') as file:
-        data = json.load(file)
-        
-    data_baru = {
-        "id": location,
-        "nama": nama
-    }
-    
-    data.append(data_baru)
-    with open('dataJari.json', 'w') as file:
-        json.dump(data, file, indent=4)
-
-    print("Data Jari baru berhasil ditambahkan ke JSON.")
+    location = GLOBAL_ADD_NEW_ID_USER  # Menggunakan bilangan bulat acak
 
     for fingerimg in range(1, 3):
         if fingerimg == 1:
@@ -167,19 +187,24 @@ def enroll_finger(nama):
         lcdDisplay.set("Finger              ",1)
         lcdDisplay.set("Stored              ",2)
         print("Stored")
+        ambil_gambar()
+        return True
     else:
         if i == adafruit_fingerprint.BADLOCATION:
             lcdDisplay.set("Error            ",1)
             lcdDisplay.set("Store             ",2)
             print("Bad storage location")
+            bot.send_message("5499814195", "Error Menambahkan data sidik jari")
         elif i == adafruit_fingerprint.FLASHERR:
             lcdDisplay.set("Error             ",1)
             lcdDisplay.set("Store            ",2)
             print("Flash storage error")
+            bot.send_message("5499814195", "Error Menambahkan data sidik jari")
         else:
             lcdDisplay.set("Error            ",1)
             lcdDisplay.set("Store            ",2)
             print("Other error")
+            bot.send_message("5499814195", "Error Menambahkan data sidik jari")
         return False
 
     return True
@@ -192,6 +217,9 @@ def get_fingerprint():
     relay_status = False
     statusVibration = False
     vibration_start_time = 0
+    
+    lcdDisplay.set("Authentication   ",1)
+    lcdDisplay.set("Finger Is Ready  ",2)
     
     try:
         """Get a finger print image, template it, and see if it matches!"""
@@ -255,12 +283,9 @@ def get_fingerprint():
             namaJari = searchDataJari(finger.finger_id)
             print("Sidik jari terdeteksi")
             print("ID:", finger.finger_id, "Confidence:", finger.confidence)
-            bot.send_message("5499814195", "atas nama "+str(namaJari)+" masuk menggunakan Fingerprint")
+            bot.send_message("5499814195", "atas nama "+str(namaJari)+" melakukan authentication Fingerprint")
             lcdDisplay.set("Finger is       ",1)
             lcdDisplay.set("Registered      ",2)
-            time.sleep(1.5)
-            lcdDisplay.set("Authentication   ",1)
-            lcdDisplay.set("Success          ",2)
             GLOBAL_AUTH_FINGER = True
             GLOBAL_ID_USER_FINGER = int(finger.finger_id)
             return True
@@ -269,7 +294,7 @@ def get_fingerprint():
         print("error = "+str(e))
     
 # Fungsi untuk mengambil gambar data
-def ambil_gambar(nama):
+def ambil_gambar():
     print("masuk fungsi ambil gambar")
     lcdDisplay.set("Take Picture     ",1)
     lcdDisplay.set("Success          ",2)
@@ -283,22 +308,7 @@ def ambil_gambar(nama):
     faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
     
     # Menghasilkan ID bilangan bulat acak
-    id = random.randint(1, 254)  # Menggunakan bilangan bulat acak
-
-    # menginput data json baru
-    with open('data.json', 'r') as file:
-        data = json.load(file)
-        
-    data_baru = {
-        "id": id,
-        "nama": nama
-    }
-    
-    data.append(data_baru)
-    with open('data.json', 'w') as file:
-        json.dump(data, file, indent=4)
-
-    print("Data baru berhasil ditambahkan ke JSON.")
+    id = GLOBAL_ADD_NEW_ID_USER
     
     a = 0
     while True:
@@ -307,6 +317,7 @@ def ambil_gambar(nama):
 
         if not check:
             print("Gagal membaca frame.")
+            bot.send_message("5499814195", "Gagal Membaca Frame")
             break
 
         abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -330,7 +341,9 @@ def ambil_gambar(nama):
     video.release()
     cv2.destroyAllWindows()
     latih_model()
+    add_new_data()
     print("fungsi ambil gambar berakhir")
+    
 
 # Fungsi untuk melatih model pengenalan wajah
 def latih_model():
@@ -394,6 +407,11 @@ def authCamera():
     global GLOBAL_AUTH_FACE
     global GLOBAL_ID_USER_FACE
     global GLOBAL_STOP_LOOP
+    
+    print("masuk auth camera")
+    lcdDisplay.set("Authentication   ",1)
+    lcdDisplay.set("Face Is Ready    ",2)
+    
     camera = 0
     video = cv2.VideoCapture(camera)
     faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -435,7 +453,7 @@ def authCamera():
                     if takeName is not False:
                         cv2.imwrite('detected_face.jpg', detected_face)
                         bot.send_photo("5499814195", photo=open('detected_face.jpg', 'rb'))
-                        bot.send_message("5499814195", "Atas nama " + takeName + " telah memasuki ruangan")
+                        bot.send_message("5499814195", "Atas nama " + takeName + " melakukan authentication muka")
                         status = True
                         if not relay_status:
                             lcdDisplay.set("Authentication  ",1)
@@ -520,10 +538,22 @@ def authentication():
         # Menunggu sampai thread get_fingerprint selesai
         auth_camera_thread.join()
     
-    
-    #status_detect_finger = threading.Event()
-    print("user finger = " + str(GLOBAL_ID_USER_FINGER))
-    print("user face = " + str(GLOBAL_ID_USER_FACE))
+    if GLOBAL_AUTH_FACE and GLOBAL_AUTH_FINGER:
+        print("user finger = " + str(GLOBAL_ID_USER_FINGER))
+        print("user face = " + str(GLOBAL_ID_USER_FACE))
+        lcdDisplay.set("Authentication   ",1)
+        lcdDisplay.set("Successfully     ",2)
+        threading.Thread(target=relayAction).start()
+        takeName = searchDataMuka(int(GLOBAL_ID_USER_FACE))
+        bot.send_message("5499814195", "atas nama "+str(takeName)+" memasuki ruangan")
+        checkFile()
+    else:
+        print("user finger = " + str(GLOBAL_ID_USER_FINGER))
+        print("user face = " + str(GLOBAL_ID_USER_FACE))
+        lcdDisplay.set("Authentication   ",1)
+        lcdDisplay.set("is Failed        ",2)
+        bot.send_message("5499814195", "Data sidik jari dan muka tidak sesuai")
+        checkFile()
 
 
 @bot.message_handler(commands=['startService'])
@@ -534,6 +564,8 @@ def start_service_command(message):
 def start_service_command(message):
     global GLOBAL_STOP_LOOP
     GLOBAL_STOP_LOOP = True
+    lcdDisplay.set("Stop            ",1)
+    lcdDisplay.set("Service         ",2)
     print("stopService uy")
     
 @bot.message_handler(commands=['ambilGambar'])
@@ -580,6 +612,9 @@ def send_welcome(message):
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
     bot.reply_to(message, message.text)
+    
+
+checkFile()
 
 GPIO.output(relay_pin, GPIO.LOW)
 bot.infinity_polling()
