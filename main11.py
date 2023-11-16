@@ -17,9 +17,6 @@ import adafruit_fingerprint
 lcdDisplay = lcd.HD44780(0x27)
 uart = serial.Serial("/dev/ttyS0", baudrate=57600, timeout=1)
 finger = adafruit_fingerprint.Adafruit_Fingerprint(uart)
-detectFingerStatus = False
-statusFingerEvent = threading.Event()
-varStopService = 0
 
 # Inisialisasi bot Telegram
 bot = telebot.TeleBot("6354339926:AAGJt4Mxbe5hxdDMnIlhQSkLsNP286f46rM")
@@ -42,15 +39,22 @@ GPIO.setup(push_button, GPIO.IN,pull_up_down=GPIO.PUD_UP)
 # Konfigurasi sensor getaran SW-18010P
 GPIO.add_event_detect(vibration_pin, GPIO.BOTH, bouncetime=300)
 
-def changeStatusFinger():
-    global detectFingerStatus
-    detectFingerStatus = True
-    print("merubah status Finger")
+#global variable
+global GLOBAL_ID_USER_FINGER = None 
+global GLOBAL_ID_USER_FACE = None
+global GLOBAL_AUTH_FINGER = False
+global GLOBAL_AUTH_FACE = False
+global GLOBAL_STOP_LOOP = False
 
 def checkFile():
-    global detectFingerStatus
-    statusFingerEvent.clear()
-    detectFingerStatus = False
+    global GLOBAL_AUTH_FINGER
+    global GLOBAL_AUTH_FACE
+    global GLOBAL_STOP_LOOP
+    
+    GLOBAL_AUTH_FINGER = False
+    GLOBAL_AUTH_FACE = False
+    GLOBAL_STOP_LOOP = False
+    
     if os.path.exists("training.xml") and os.path.exists("data.json") and os.path.exists("dataJari.json"):
         print("file ada")
         lcdDisplay.set("Initiate       ",1)
@@ -181,62 +185,79 @@ def enroll_finger(nama):
     return True
 
 def get_fingerprint():
+    global GLOBAL_ID_USER_FINGER
+    global GLOBAL_AUTH_FINGER
+    global GLOBAL_STOP_LOOP
     try:
-        global detectFingerStatus
         """Get a finger print image, template it, and see if it matches!"""
         print("Waiting for image...")
-        while finger.get_image() != adafruit_fingerprint.OK or statusFingerEvent.is_set():
-            if statusFingerEvent.is_set() or detectFingerStatus: 
-                break
+        while finger.get_image() != adafruit_fingerprint.OK or GLOBAL_STOP_LOOP:
+            
+            #untuk button buka
+            inputValue = GPIO.input(21)
+            if (inputValue == False):
+                print("Button press ")
+                threading.Thread(target=relayAction).start()
+            
+            if GPIO.event_detected(vibration_pin):
+                bot.send_message("5499814195", "Ada yang mencoba untuk mendobrak pintu")
+                print("dobrak pintu")
+                statusVibration = True
+                vibration_start_time = time.time()
+                
+            if statusVibration == True:
+                # Deteksi jarak ultrasonik
+                GPIO.output(ultrasonic_trig_pin, True)
+                time.sleep(0.00001)
+                GPIO.output(ultrasonic_trig_pin, False)
+
+                while GPIO.input(ultrasonic_echo_pin) == 0:
+                    pulse_start = time.time()
+
+                while GPIO.input(ultrasonic_echo_pin) == 1:
+                    pulse_end = time.time()
+
+                pulse_duration = pulse_end - pulse_start
+                distance = pulse_duration * 17150
+
+                if distance < 5: #jarak ultrasonic satuan cm
+                    bot.send_message("5499814195", "Pintu berhasil dibobol")
+                    print("pintu dibobol")
+                
+                if time.time() - vibration_start_time >= 10:
+                    statusVibration = False
+                    print("status Vibration False")
             pass
         print("Templating...")
-        if finger.image_2_tz(1) != adafruit_fingerprint.OK:
+        if finger.image_2_tz(1) != adafruit_fingerprint.OK and GLOBAL_STOP_LOOP is not True:
             lcdDisplay.set("Finger is not    ",1)
             lcdDisplay.set("Registered       ",2)
             print("Citra Sidik Jari berantakan")
             bot.send_message("5499814195", "Jari tidak terdaftar")
-            detectFingerStatus = False
-            return False
+            get_fingerprint()
         print("Searching...")
-        if finger.finger_search() != adafruit_fingerprint.OK:
-            detectFingerStatus = False
-            
-            if not statusFingerEvent.is_set():  # Cek status thread
-                print("Sidik jari tidak terdaftar")
-                bot.send_message("5499814195", "Jari tidak terdaftar")
-                lcdDisplay.set("Finger is not    ",1)
-                lcdDisplay.set("Registered       ",2)
-                get_fingerprint()
-            return False
+        if finger.finger_search() != adafruit_fingerprint.OK and GLOBAL_STOP_LOOP is not True:
+            print("Sidik jari tidak terdaftar")
+            bot.send_message("5499814195", "Jari tidak terdaftar")
+            lcdDisplay.set("Finger is not    ",1)
+            lcdDisplay.set("Registered       ",2)
+            get_fingerprint()
+                
         namaJari = searchDataJari(finger.finger_id)
         print("Sidik jari terdeteksi")
         print("ID:", finger.finger_id, "Confidence:", finger.confidence)
         bot.send_message("5499814195", "atas nama "+str(namaJari)+" masuk menggunakan Fingerprint")
         lcdDisplay.set("Finger is       ",1)
         lcdDisplay.set("Registered      ",2)
-        time.sleep(2)
+        time.sleep(1.5)
         lcdDisplay.set("Authentication   ",1)
         lcdDisplay.set("Success          ",2)
-        detectFingerStatus = True
-        statusFingerEvent.set()
-        threading.Thread(target=relayAction).start()
+        GLOBAL_AUTH_FINGER = True
+        GLOBAL_ID_USER_FINGER = int(finger.finger_id)
         return True
     except Exception as e:
         bot.send_message("5499814195", "Terjadi Error DI get_fingerprint")
-        statusFingerEvent.set()
-        statusFingerEvent.set()
         print("error = "+str(e))
-        stopService()
-        
-def stopService():
-    global varStopService
-    varStopService = varStopService + 1
-    print("var stop Service = "+str(varStopService))
-    statusFingerEvent.set()
-    print("stop Service")
-    bot.send_message("5499814195", "Stop Service")
-    if varStopService > 1:
-        checkFile()
     
 # Fungsi untuk mengambil gambar data
 def ambil_gambar(nama):
@@ -332,7 +353,6 @@ def relayAction():
     relay_status = True
     time.sleep(10)
     GPIO.output(relay_pin, GPIO.LOW)
-    statusFingerEvent.clear()
     print("udahan relay")
     authentication()
     
@@ -361,18 +381,11 @@ def searchDataJari(id):
     else:
         print("ID tidak ditemukan")
         return False
-    
-# Fungsi untuk melakukan pemindaian wajah
-def authentication():
-    global varStopService
-    if not statusFingerEvent.is_set():  # Cek status thread
-        statusFinger = threading.Thread(target=get_fingerprint)
-        statusFinger.start()
-    
-    global detectFingerStatus
-    print("masuk function authentication")
-    lcdDisplay.set("Authentication  ",1)
-    lcdDisplay.set("Ready           ",2)
+
+def authCamera():
+    global GLOBAL_AUTH_FACE
+    global GLOBAL_ID_USER_FACE
+    global GLOBAL_STOP_LOOP
     camera = 0
     video = cv2.VideoCapture(camera)
     faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -386,15 +399,8 @@ def authentication():
     statusVibration = False
     vibration_start_time = 0
     
-    
-    while not statusFingerEvent.is_set():
-        if detectFingerStatus is True:
-            print("masuk detect finger True")
-            break
-        if statusFingerEvent.is_set():  # Cek status thread
-            print("masuk detect finger True")
-            statusFinger.join()  # Tunggu thread selesai
-            break
+    #authCamera
+    while not GLOBAL_STOP_LOOP:
         a = a + 1
         check, frame = video.read()
         abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -409,7 +415,7 @@ def authentication():
         for (x, y, w, h) in wajah:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             id, conf = recognizer.predict(abu[y:y+h, x:x+w])
-            if conf < 70:
+            if conf < 50:
                 id = id
                 cv2.putText(frame, str(id) + "=" + str(conf), (x + 40, y - 10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0))
                 if detected_face is None:
@@ -424,13 +430,11 @@ def authentication():
                         bot.send_message("5499814195", "Atas nama " + takeName + " telah memasuki ruangan")
                         status = True
                         if not relay_status:
-                            statusFingerEvent.set()
                             lcdDisplay.set("Authentication  ",1)
                             lcdDisplay.set("Success         ",2)
+                            GLOBAL_AUTH_FACE = True
                             threading.Thread(target=relayAction).start()
-                            detectFingerStatus = True
-                            varStopService = 0
-                            statusFinger.join()  # Tunggu thread selesai
+                            GLOBAL_ID_USER_FACE = int(id)
                         break
                     else:
                         cv2.imwrite('detected_face.jpg', detected_face)
@@ -438,8 +442,6 @@ def authentication():
                         bot.send_message("5499814195", "terjadi kesalahan Data muka tidak ditemukan")
                         lcdDisplay.set("Authentication",1)
                         lcdDisplay.set("Failed",2)
-                        varStopService = 0
-                        statusFinger.join()  # Tunggu thread selesai
                         break
             else:
                 detected_face = None
@@ -484,9 +486,36 @@ def authentication():
 
     video.release()
     cv2.destroyAllWindows()
-    print("udahan scanwajah")
+    
+# Fungsi untuk melakukan pemindaian wajah
+def authentication():
+    global GLOBAL_ID_USER_FINGER
+    global GLOBAL_ID_USER_FACE
+    global GLOBAL_STOP_LOOP
+    
+    print("masuk function authentication")
+    lcdDisplay.set("Authentication  ",1)
+    lcdDisplay.set("Ready           ",2)
+    
+    if GLOBAL_STOP_LOOP is not True:
+        # Membuat dan memulai thread untuk get_fingerprint
+        fingerprint_thread = threading.Thread(target=get_fingerprint)
+        fingerprint_thread.start()
+
+    # Menunggu sampai thread get_fingerprint selesai
+    fingerprint_thread.join()
+
+    if GLOBAL_STOP_LOOP is not True:
+        # Setelah thread get_fingerprint selesai, lanjut ke authCamera
+        auth_camera_thread  = threading.Thread(target=authCamera)
+        auth_camera_thread.start()
+    
+    # Menunggu sampai thread get_fingerprint selesai
+    auth_camera_thread.join()
+    
     #status_detect_finger = threading.Event()
-    detectFingerStatus = False
+    print("user finger = " + str(GLOBAL_ID_USER_FINGER))
+    print("user face = " + str(GLOBAL_ID_USER_FACE))
 
 
 @bot.message_handler(commands=['startService'])
@@ -495,16 +524,11 @@ def start_service_command(message):
     
 @bot.message_handler(commands=['stopService'])
 def start_service_command(message):
-    global detectFingerStatus
-    detectFingerStatus = True
-    statusFingerEvent.set()
-    lcdDisplay.set("Stop             ",1)
-    lcdDisplay.set("Service          ",2)
-
+    global GLOBAL_STOP_LOOP
+    GLOBAL_STOP_LOOP = True
+    
 @bot.message_handler(commands=['ambilGambar'])
 def ambil_gambar_command(message):
-    global detectFingerStatus
-    detectFingerStatus = True
     bot.reply_to(message, "Silakan masukkan nama Anda:")
     bot.register_next_step_handler(message, handle_nama_input)
 
@@ -525,8 +549,6 @@ def scan_jari_command(message):
     
 @bot.message_handler(commands=['tambahJari'])
 def add_finger(message):
-    global detectFingerStatus
-    detectFingerStatus = True
     bot.reply_to(message, "Silakan masukkan nama untuk Jari yang didaftarkan:")
     bot.register_next_step_handler(message, handle_nama_input_jari)
 
