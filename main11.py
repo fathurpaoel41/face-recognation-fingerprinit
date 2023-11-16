@@ -196,7 +196,7 @@ def get_fingerprint():
     try:
         """Get a finger print image, template it, and see if it matches!"""
         print("Waiting for image...")
-        while finger.get_image() != adafruit_fingerprint.OK or GLOBAL_STOP_LOOP is not True:
+        while finger.get_image() != adafruit_fingerprint.OK:
             if GLOBAL_STOP_LOOP:
                 break
             
@@ -235,22 +235,23 @@ def get_fingerprint():
                     statusVibration = False
                     print("status Vibration False")
             pass
-        print("Templating...")
-        if finger.image_2_tz(1) != adafruit_fingerprint.OK and GLOBAL_STOP_LOOP is not True:
-            lcdDisplay.set("Finger is not    ",1)
-            lcdDisplay.set("Registered       ",2)
-            print("Citra Sidik Jari berantakan")
-            bot.send_message("5499814195", "Jari tidak terdaftar")
-            get_fingerprint()
-        print("Searching...")
-        if finger.finger_search() != adafruit_fingerprint.OK and GLOBAL_STOP_LOOP is not True:
-            print("Sidik jari tidak terdaftar")
-            bot.send_message("5499814195", "Jari tidak terdaftar")
-            lcdDisplay.set("Finger is not    ",1)
-            lcdDisplay.set("Registered       ",2)
-            get_fingerprint()
         
-        if not GLOBAL_STOP_LOOP:        
+        if not GLOBAL_STOP_LOOP:
+            print("Templating...")
+            if finger.image_2_tz(1) != adafruit_fingerprint.OK:
+                lcdDisplay.set("Finger is not    ",1)
+                lcdDisplay.set("Registered       ",2)
+                print("Citra Sidik Jari berantakan")
+                bot.send_message("5499814195", "Jari tidak terdaftar")
+                get_fingerprint()
+            print("Searching...")
+            if finger.finger_search() != adafruit_fingerprint.OK:
+                print("Sidik jari tidak terdaftar")
+                bot.send_message("5499814195", "Jari tidak terdaftar")
+                lcdDisplay.set("Finger is not    ",1)
+                lcdDisplay.set("Registered       ",2)
+                get_fingerprint()
+            
             namaJari = searchDataJari(finger.finger_id)
             print("Sidik jari terdeteksi")
             print("ID:", finger.finger_id, "Confidence:", finger.confidence)
@@ -508,17 +509,17 @@ def authentication():
         # Membuat dan memulai thread untuk get_fingerprint
         fingerprint_thread = threading.Thread(target=get_fingerprint)
         fingerprint_thread.start()
+        # Menunggu sampai thread get_fingerprint selesai
+        fingerprint_thread.join()
 
-    # Menunggu sampai thread get_fingerprint selesai
-    fingerprint_thread.join()
 
     if not GLOBAL_STOP_LOOP:
         # Setelah thread get_fingerprint selesai, lanjut ke authCamera
         auth_camera_thread  = threading.Thread(target=authCamera)
         auth_camera_thread.start()
+        # Menunggu sampai thread get_fingerprint selesai
+        auth_camera_thread.join()
     
-    # Menunggu sampai thread get_fingerprint selesai
-    auth_camera_thread.join()
     
     #status_detect_finger = threading.Event()
     print("user finger = " + str(GLOBAL_ID_USER_FINGER))
