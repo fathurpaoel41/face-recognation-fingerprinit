@@ -12,6 +12,7 @@ import json
 import random
 import serial
 import adafruit_fingerprint
+import shutil
 
 #inisialisasi alat
 lcdDisplay = lcd.HD44780(0x27)
@@ -75,7 +76,6 @@ def check_id(new_name):
     data = None
     with open('data.json', 'r') as f:
         data = json.load(f)
-    # Membuat ID acak
     new_id = random.randint(1, 200)
 
     # Mengecek apakah ID atau nama sudah ada dalam data
@@ -109,6 +109,40 @@ def add_new_data():
         json.dump(data, file, indent=4)
 
     print("Data berhasil ditambahkan ke JSON.")
+    
+def delete_item(nama):
+    with open('data.json', 'r') as file:
+        data = json.load(file)
+
+    # Cari objek dengan nama "Fathur"
+    for i in range(len(data)):
+        if data[i]['nama'].lower() == nama.lower():
+            id = data[i]['id']
+            del data[i]
+            with open('data.json', 'w') as file:
+                json.dump(data, file)
+                
+            finger.delete_model(id)
+            delete_item_picture_thread = threading.Thread(target=deleteItemPicture, args=(id))
+            delete_item_picture_thread.start()
+            
+            latih_model()
+            print(f"Data dengan nama {nama} dan ID {id} telah dihapus.")
+            return
+
+    print("Data tidak ditemukan")
+
+def deleteItemPicture(id):
+    for filename in os.listdir("Dataset"):
+        if filename.startswith("User.") and filename.endswith(".jpg") and filename.split(".")[1] == id:
+            file_path = os.path.join("Dataset", filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
 #menambahkan data sidik jari
@@ -118,7 +152,7 @@ def enroll_finger():
     lcdDisplay.set("Finger          ",2)
     time.sleep(3)
     """Take a 2 finger images and template it, then store in specified location"""
-    location = GLOBAL_ADD_NEW_ID_USER  # Menggunakan bilangan bulat acak
+    location = GLOBAL_ADD_NEW_ID_USER
 
     for fingerimg in range(1, 3):
         if fingerimg == 1:
@@ -217,17 +251,12 @@ def enroll_finger():
             bot.send_message("5499814195", "Error Menambahkan data sidik jari")
         return False
 
-    return True
-
 def get_fingerprint():
     global GLOBAL_ID_USER_FINGER
     global GLOBAL_AUTH_FINGER
     global GLOBAL_STOP_LOOP
-    status = False
-    relay_status = False
     statusVibration = False
     vibration_start_time = 0
-    
     lcdDisplay.set("Authentication   ",1)
     lcdDisplay.set("Finger Is Ready  ",2)
     
@@ -269,7 +298,7 @@ def get_fingerprint():
                     bot.send_message("5499814195", "Pintu berhasil dibobol")
                     print("pintu dibobol")
                 
-                if time.time() - vibration_start_time >= 10:
+                if time.time() - vibration_start_time >= 10: #durasi aktif sensor ultrasonic satuan detik
                     statusVibration = False
                     print("status Vibration False")
             pass
@@ -290,7 +319,7 @@ def get_fingerprint():
                 lcdDisplay.set("Registered       ",2)
                 get_fingerprint()
             
-            namaJari = searchDataJari(finger.finger_id)
+            namaJari = searchDataJson(finger.finger_id)
             print("Sidik jari terdeteksi")
             print("ID:", finger.finger_id, "Confidence:", finger.confidence)
             bot.send_message("5499814195", "atas nama "+str(namaJari)+" melakukan authentication Fingerprint")
@@ -310,30 +339,37 @@ def ambil_gambar():
     lcdDisplay.set("Success          ",2)
     camera = 0
     video = cv2.VideoCapture(camera)
+    faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    id = GLOBAL_ADD_NEW_ID_USER
 
     if not video.isOpened():
         print("Gagal membuka kamera.")
-        return
+        try:
+            finger.delete_model(id)
+        except Exception as e:
+            print("Error Delete Finger "+str(e))
+            bot.send_message("5499814195", "Terjadi Error delete finger")
+        return False
 
-    faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-    
-    # Menghasilkan ID bilangan bulat acak
-    id = GLOBAL_ADD_NEW_ID_USER
-    
     a = 0
     while True:
-        a = a + 1
         check, frame = video.read()
 
         if not check:
             print("Gagal membaca frame.")
             bot.send_message("5499814195", "Gagal Membaca Frame")
+            try:
+                finger.delete_model(id)
+            except Exception as e:
+                print("Error Delete Finger "+str(e))
+                bot.send_message("5499814195", "Terjadi Error delete finger")
             break
 
         abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         wajah = faceDeteksi.detectMultiScale(abu, 1.3, 5)
 
         for (x, y, w, h) in wajah:
+            a = a + 1
             wajah_cropped = frame[y:y+h, x:x+w]
 
             # Simpan gambar dengan menggunakan ID bilangan bulat
@@ -345,7 +381,7 @@ def ambil_gambar():
 
         cv2.imshow("Face Recognition", frame)
 
-        if a > 100:
+        if a > 100: #value untuk melakukan berapa kali gambar data latih
             break
 
     video.release()
@@ -378,29 +414,14 @@ def latih_model():
     faces, Ids = getImagesWithLabels('DataSet')
     recognizer.train(faces, np.array(Ids))
     recognizer.save('training.xml')
-    print("masuk fungsi latih model")
 
 def relayAction():
     GPIO.output(relay_pin, GPIO.HIGH)
-    relay_status = True
     time.sleep(10)
     GPIO.output(relay_pin, GPIO.LOW)
-    print("udahan relay")
-    
-def searchDataMuka(id):
-    with open('data.json', 'r') as file:
-        data = json.load(file)
+    print("Relay Selesai")
 
-    # Iterasi melalui elemen-elemen dalam JSON
-    for item in data:
-        if item['id'] == id:
-            print(item['nama'])
-            return item['nama']
-    else:
-        print("ID tidak ditemukan")
-        return False 
-
-def searchDataJari(id):
+def searchDataJson(id):
     with open('data.json', 'r') as file:
         data = json.load(file)
 
@@ -451,14 +472,14 @@ def authCamera():
         for (x, y, w, h) in wajah:
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             id, conf = recognizer.predict(abu[y:y+h, x:x+w])
-            if conf < 50:
+            if conf < 50: #akurasi yang diterima pengenalan wajah, semakin kecil semakin akurat
                 id = id
                 cv2.putText(frame, str(id) + "=" + str(conf), (x + 40, y - 10), cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0))
                 if detected_face is None:
                     detected_face = frame[y:y+h, x:x+w]
                     detected_start_time = a
-                elif a - detected_start_time >= 5:
-                    takeName = searchDataMuka(int(id))
+                elif a - detected_start_time >= 5: #durasi terdeteksi muka
+                    takeName = searchDataJson(int(id))
                     
                     if takeName is not False:
                         cv2.imwrite('detected_face.jpg', detected_face)
@@ -516,9 +537,6 @@ def authCamera():
         key = cv2.waitKey(1)
         if key == ord('a') or status:
             break
-            
-        if key == ord('y') or status:
-            changeStatusFinger()
 
     video.release()
     cv2.destroyAllWindows()
@@ -537,7 +555,6 @@ def authentication():
         # Membuat dan memulai thread untuk get_fingerprint
         fingerprint_thread = threading.Thread(target=get_fingerprint)
         fingerprint_thread.start()
-        # Menunggu sampai thread get_fingerprint selesai
         fingerprint_thread.join()
 
 
@@ -545,7 +562,6 @@ def authentication():
         # Setelah thread get_fingerprint selesai, lanjut ke authCamera
         auth_camera_thread  = threading.Thread(target=authCamera)
         auth_camera_thread.start()
-        # Menunggu sampai thread get_fingerprint selesai
         auth_camera_thread.join()
     
     if GLOBAL_AUTH_FACE and GLOBAL_AUTH_FINGER:
@@ -554,7 +570,7 @@ def authentication():
         lcdDisplay.set("Authentication   ",1)
         lcdDisplay.set("Successfully     ",2)
         threading.Thread(target=relayAction).start()
-        takeName = searchDataMuka(int(GLOBAL_ID_USER_FACE))
+        takeName = searchDataJson(int(GLOBAL_ID_USER_FACE))
         bot.send_message("5499814195", "atas nama "+str(takeName)+" memasuki ruangan")
         checkFile()
     else:
@@ -570,6 +586,21 @@ def authentication():
 def start_service_command(message):
     checkFile()
     
+@bot.message_handler(commands=['listUser'])
+def list_user_command(message):
+    nama_list = ""
+
+    with open('data.json') as json_file:
+        data = json.load(json_file)
+        
+    for object in data:
+        nama = object['nama']
+        nama_list += nama + ", "
+        
+    nama_list = nama_list[:-2]
+
+    bot.reply_to(message, "Data User = "+nama_list)
+    
 @bot.message_handler(commands=['stopService'])
 def start_service_command(message):
     global GLOBAL_STOP_LOOP
@@ -580,51 +611,60 @@ def start_service_command(message):
     
 @bot.message_handler(commands=['addUser'])
 def add_user_command(message):
-    bot.reply_to(message, "Silakan masukkan nama Anda:")
+    bot.reply_to(message, "Silakan masukkan nama identitas yang akan ditambahkan:")
     bot.register_next_step_handler(message, handle_nama_input)
 
 def handle_nama_input(message):
     nama = message.text
     check_id(nama)
 
-@bot.message_handler(commands=['scanWajah'])
-def ambil_gambar_command(message):
-    authentication()
-    
-@bot.message_handler(commands=['scanJari'])
-def scan_jari_command(message):
-    if get_fingerprint():
-        print("Detected #", finger.finger_id, "with confidence", finger.confidence)
-    else:
-        print("Finger not found")
-    
-@bot.message_handler(commands=['tambahJari'])
-def add_finger(message):
-    bot.reply_to(message, "Silakan masukkan nama untuk Jari yang didaftarkan:")
-    bot.register_next_step_handler(message, handle_nama_input_jari)
+@bot.message_handler(commands=['removeUser'])
+def remove_user_command(message):
+    bot.reply_to(message, "Silakan masukkan nama identitas yang akan dihapus:")
+    bot.register_next_step_handler(message, handle_remove_user_input)
 
-def handle_nama_input_jari(message):
+def handle_remove_user_input(message):
     nama = message.text
-    enroll_finger(nama)
+    delete_item(nama)
 
 # Handler untuk perintah /start dan /help
-@bot.message_handler(commands=['start', 'help'])
+@bot.message_handler(commands=['help'])
 def send_welcome(message):
-    bot.reply_to(message, "Howdy, how are you doing?")
+    reply_message = """
+    Smart Doorlock System is running!
 
-# Handler untuk perintah /halo
-@bot.message_handler(commands=['halo'])
-def send_welcome(message):
-    print("chatid = "+str(message.chat.id))
-    bot.reply_to(message, "knp lol?")
+    /startService = for start service authentication
+    /stopService = for stop service authentication
+    /addUser = for add new User authentication
+    /removeUser = for remove User authentication
+    /listUser = for see all user authentication
+    """
+    bot.reply_to(message, reply_message)
 
 # Handler umum
 @bot.message_handler(func=lambda message: True)
 def echo_all(message):
-    bot.reply_to(message, message.text)
+    reply_message = """
+    Smart Doorlock System is running!
+
+    /startService = for start service authentication
+    /stopService = for stop service authentication
+    /addUser = for add new User authentication
+    /removeUser = for remove User authentication
+    /listUser = for see all user authentication
+    """
+    bot.reply_to(message, reply_message)
     
 
 checkFile()
+reply_message = """
+    Smart Doorlock System is running!
+
+    /startService = for start service authentication
+    /stopService = for stop service authentication
+    /addUser = for add new User authentication
+    """
+bot.send_message("5499814195", reply_message)
 
 GPIO.output(relay_pin, GPIO.LOW)
 bot.infinity_polling()
