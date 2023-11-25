@@ -134,23 +134,26 @@ def delete_item(nama):
 
     print("Data tidak ditemukan")
 
-                
-def deleteItemPicture(id):
+def deleteItemPicture(id_user):
     # Mendapatkan daftar file di dalam folder
     file_list = os.listdir("Dataset")
 
     # Melakukan iterasi pada setiap file
     for file_name in file_list:
-        if file_name.endswith(".jpg"):
+        if file_name.endswith(".txt"):
             # Memisahkan nama file menjadi bagian-bagian yang relevan
-            name, file_id_user, _ = file_name.split(".")
-
+            name, file_id_user = file_name.split(".", 1)
+            a,b = file_id_user.split(".", 1)
+            print(file_id_user)
+            print(file_name)
             # Memeriksa apakah idUser sama dengan id_user yang diberikan
-            if file_id_user == str(id):
+            if str(a) == str(id_user):
                 # Menghapus file
+                print("masuk")
                 file_path = os.path.join("Dataset", file_name)
                 os.remove(file_path)
                 print(f"File {file_name} telah dihapus.")
+
 
 
 
