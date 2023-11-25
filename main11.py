@@ -121,11 +121,9 @@ def delete_item(nama):
             del data[i]
             with open('data.json', 'w') as file:
                 json.dump(data, file)
-            
-            print("idnya = " + id)    
+               
             finger.delete_model(id)
-            delete_item_picture_thread = threading.Thread(target=deleteItemPicture, args=(id))
-            delete_item_picture_thread.start()
+            deleteItemPicture(id)
             bot.send_message("5499814195", "Menghapus Data User Telah Berhasil!")
             
             latih_model()
@@ -136,11 +134,11 @@ def delete_item(nama):
 
 def deleteItemPicture(id_user):
     # Mendapatkan daftar file di dalam folder
-    file_list = os.listdir("Dataset")
-
+    file_list = os.listdir("DataSet")
+    id_user = int(id_user)
     # Melakukan iterasi pada setiap file
     for file_name in file_list:
-        if file_name.endswith(".txt"):
+        if file_name.endswith(".jpg"):
             # Memisahkan nama file menjadi bagian-bagian yang relevan
             name, file_id_user = file_name.split(".", 1)
             a,b = file_id_user.split(".", 1)
@@ -150,7 +148,7 @@ def deleteItemPicture(id_user):
             if str(a) == str(id_user):
                 # Menghapus file
                 print("masuk")
-                file_path = os.path.join("Dataset", file_name)
+                file_path = os.path.join("DataSet", file_name)
                 os.remove(file_path)
                 print(f"File {file_name} telah dihapus.")
 
@@ -585,12 +583,18 @@ def authentication():
     if GLOBAL_AUTH_FACE and GLOBAL_AUTH_FINGER:
         print("user finger = " + str(GLOBAL_ID_USER_FINGER))
         print("user face = " + str(GLOBAL_ID_USER_FACE))
-        lcdDisplay.set("Authentication   ",1)
-        lcdDisplay.set("Successfully     ",2)
-        threading.Thread(target=relayAction).start()
-        takeName = searchDataJson(int(GLOBAL_ID_USER_FACE))
-        bot.send_message("5499814195", "atas nama "+str(takeName)+" memasuki ruangan")
-        time.sleep(1.5)
+        if GLOBAL_ID_USER_FACE == GLOBAL_ID_USER_FINGER:
+            lcdDisplay.set("Authentication   ",1)
+            lcdDisplay.set("Successfully     ",2)
+            threading.Thread(target=relayAction).start()
+            takeName = searchDataJson(int(GLOBAL_ID_USER_FACE))
+            bot.send_message("5499814195", "atas nama "+str(takeName)+" memasuki ruangan")
+            time.sleep(1.5)
+        else:
+            lcdDisplay.set("Authentication   ",1)
+            lcdDisplay.set("Failed           ",2)
+            bot.send_message("5499814195", "Sidik jari dengan Muka tidak sama")
+            time.sleep(1.5)
         checkFile()
     else:
         print("user finger = " + str(GLOBAL_ID_USER_FINGER))
