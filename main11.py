@@ -121,7 +121,8 @@ def delete_item(nama):
             del data[i]
             with open('data.json', 'w') as file:
                 json.dump(data, file)
-                
+            
+            print("idnya = " + id)    
             finger.delete_model(id)
             delete_item_picture_thread = threading.Thread(target=deleteItemPicture, args=(id))
             delete_item_picture_thread.start()
@@ -133,17 +134,24 @@ def delete_item(nama):
 
     print("Data tidak ditemukan")
 
+                
 def deleteItemPicture(id):
-    for filename in os.listdir("Dataset"):
-        if filename.startswith("User.") and filename.endswith(".jpg") and filename.split(".")[1] == id:
-            file_path = os.path.join("Dataset", filename)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)
-            except Exception as e:
-                print('Failed to delete %s. Reason: %s' % (file_path, e))
+    # Mendapatkan daftar file di dalam folder
+    file_list = os.listdir("Dataset")
+
+    # Melakukan iterasi pada setiap file
+    for file_name in file_list:
+        if file_name.endswith(".jpg"):
+            # Memisahkan nama file menjadi bagian-bagian yang relevan
+            name, file_id_user, _ = file_name.split(".")
+
+            # Memeriksa apakah idUser sama dengan id_user yang diberikan
+            if file_id_user == str(id):
+                # Menghapus file
+                file_path = os.path.join("Dataset", file_name)
+                os.remove(file_path)
+                print(f"File {file_name} telah dihapus.")
+
 
 
 #menambahkan data sidik jari
@@ -309,6 +317,7 @@ def get_fingerprint():
             if finger.image_2_tz(1) != adafruit_fingerprint.OK:
                 lcdDisplay.set("Finger is not    ",1)
                 lcdDisplay.set("Registered       ",2)
+                time.sleep(1.5)
                 print("Citra Sidik Jari berantakan")
                 bot.send_message("5499814195", "Jari tidak terdaftar")
                 get_fingerprint()
@@ -382,7 +391,7 @@ def ambil_gambar():
 
         cv2.imshow("Face Recognition", frame)
 
-        if a > 100: #value untuk melakukan berapa kali gambar data latih
+        if a > 50: #value untuk melakukan berapa kali gambar data latih
             break
 
     video.release()
@@ -576,15 +585,21 @@ def authentication():
         threading.Thread(target=relayAction).start()
         takeName = searchDataJson(int(GLOBAL_ID_USER_FACE))
         bot.send_message("5499814195", "atas nama "+str(takeName)+" memasuki ruangan")
+        time.sleep(1.5)
         checkFile()
     else:
         print("user finger = " + str(GLOBAL_ID_USER_FINGER))
         print("user face = " + str(GLOBAL_ID_USER_FACE))
-        lcdDisplay.set("Authentication   ",1)
-        lcdDisplay.set("is Failed        ",2)
-        bot.send_message("5499814195", "Data sidik jari dan muka tidak sesuai")
         if not GLOBAL_STOP_LOOP:
+            bot.send_message("5499814195", "Data sidik jari dan muka tidak sesuai")
+            lcdDisplay.set("Authentication   ",1)
+            lcdDisplay.set("is Failed        ",2)
+            time.sleep(1.5)
             checkFile()
+        else:
+            lcdDisplay.set("Stop            ",1)
+            lcdDisplay.set("Service         ",2)
+            bot.send_message("5499814195", "Stop Service!!")
 
 
 @bot.message_handler(commands=['startService'])
@@ -660,8 +675,6 @@ def echo_all(message):
     """
     bot.reply_to(message, reply_message)
     
-
-checkFile()
 reply_message = """
     Smart Doorlock System is running!
 
@@ -672,6 +685,7 @@ reply_message = """
     /listUser = for see all user authentication
     """
 bot.send_message("5499814195", reply_message)
+checkFile()
 
 GPIO.output(relay_pin, GPIO.LOW)
 bot.infinity_polling()
