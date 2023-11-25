@@ -327,6 +327,7 @@ def get_fingerprint():
                 bot.send_message("5499814195", "Jari tidak terdaftar")
                 lcdDisplay.set("Finger is not    ",1)
                 lcdDisplay.set("Registered       ",2)
+                time.sleep(1.5)
                 get_fingerprint()
             
             namaJari = searchDataJson(finger.finger_id)
@@ -335,6 +336,7 @@ def get_fingerprint():
             bot.send_message("5499814195", "atas nama "+str(namaJari)+" melakukan authentication Fingerprint")
             lcdDisplay.set("Finger is       ",1)
             lcdDisplay.set("Registered      ",2)
+            time.sleep(1.5)
             GLOBAL_AUTH_FINGER = True
             GLOBAL_ID_USER_FINGER = int(finger.finger_id)
             return True
@@ -685,7 +687,7 @@ reply_message = """
     /listUser = for see all user authentication
     """
 bot.send_message("5499814195", reply_message)
-checkFile()
+#checkFile()
 
 GPIO.output(relay_pin, GPIO.LOW)
 bot.infinity_polling()
