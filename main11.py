@@ -61,13 +61,13 @@ def checkFile():
     
     if os.path.exists("training.xml") and os.path.exists("data.json") and os.path.exists("dataJari.json"):
         print("file ada")
-        lcdDisplay.set("Initiate       ",1)
+        lcdDisplay.set("Initiate        ",1)
         lcdDisplay.set("Success         ",2)
         time.sleep(1)
         authentication()
     else:
         lcdDisplay.set("Initiate        ",1)
-        lcdDisplay.set("Error       ",2)
+        lcdDisplay.set("Error           ",2)
         print("File Tidak ada")
         
 def check_id(new_name):
@@ -125,6 +125,7 @@ def delete_item(nama):
             finger.delete_model(id)
             delete_item_picture_thread = threading.Thread(target=deleteItemPicture, args=(id))
             delete_item_picture_thread.start()
+            bot.send_message("5499814195", "Menghapus Data User Telah Berhasil!")
             
             latih_model()
             print(f"Data dengan nama {nama} dan ID {id} telah dihapus.")
@@ -336,7 +337,7 @@ def get_fingerprint():
 def ambil_gambar():
     print("masuk fungsi ambil gambar")
     lcdDisplay.set("Take Picture     ",1)
-    lcdDisplay.set("Success          ",2)
+    lcdDisplay.set("                 ",2)
     camera = 0
     video = cv2.VideoCapture(camera)
     faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
@@ -376,7 +377,7 @@ def ambil_gambar():
             cv2.imwrite('DataSet/User.' + str(id) + '.' + str(a) + '.jpg', wajah_cropped)
             cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
             print("masuk")
-            lcdDisplay.set("Take Picture       ",1)
+            lcdDisplay.set("Take Picture        ",1)
             lcdDisplay.set(str(a)+"             ",2)
 
         cv2.imshow("Face Recognition", frame)
@@ -389,6 +390,9 @@ def ambil_gambar():
     latih_model()
     add_new_data()
     print("fungsi ambil gambar berakhir")
+    bot.send_message("5499814195", "Penambahan Data User Telah Berhasil!")
+    lcdDisplay.set("Take Picture     ",1)
+    lcdDisplay.set("Successfully     ",2)
     
 
 # Fungsi untuk melatih model pengenalan wajah
@@ -579,7 +583,8 @@ def authentication():
         lcdDisplay.set("Authentication   ",1)
         lcdDisplay.set("is Failed        ",2)
         bot.send_message("5499814195", "Data sidik jari dan muka tidak sesuai")
-        checkFile()
+        if not GLOBAL_STOP_LOOP:
+            checkFile()
 
 
 @bot.message_handler(commands=['startService'])
@@ -663,6 +668,8 @@ reply_message = """
     /startService = for start service authentication
     /stopService = for stop service authentication
     /addUser = for add new User authentication
+    /removeUser = for remove User authentication
+    /listUser = for see all user authentication
     """
 bot.send_message("5499814195", reply_message)
 
