@@ -12,7 +12,7 @@ import json
 import random
 import serial
 import adafruit_fingerprint
-import shutil
+import socket
 
 #inisialisasi alat
 lcdDisplay = lcd.HD44780(0x27)
@@ -50,6 +50,39 @@ GLOBAL_ADD_NEW_ID_USER = None
 GLOBAL_ADD_NEW_NAME_USER = None
 GLOBAL_DATA_JSON = None
 
+def checkConnection():
+    try:
+        # Coba menghubungi server Google dengan timeout 3 detik
+        socket.create_connection(("www.google.com", 80), timeout=3)
+        return True
+    except OSError:
+        pass
+    return False
+    
+def sendMessageTelegram(message):
+    try:
+        if checkConnection():
+            bot.send_message("5499814195", message)
+            return True
+        else:
+            print("tidak ada internet")
+            return False
+    except Exception as e:
+        print("error = ",e)
+        return False
+
+def sendPhotoTelegram():
+    try:
+        if checkConnection():
+            bot.send_photo("5499814195", photo=open('detected_face.jpg', 'rb'))
+            return True
+        else:
+            print("tidak ada internet")
+            return False
+    except Exception as e:
+        print("error = ",e)
+        return False
+
 def checkFile():
     global GLOBAL_AUTH_FINGER
     global GLOBAL_AUTH_FACE
@@ -83,7 +116,7 @@ def check_id(new_name):
         while item['id'] == new_id:
             new_id = random.randint(1, 200)
         if item['nama'].lower() == new_name.lower():
-            bot.send_message("5499814195", "nama "+str(new_name)+" sudah terdaftar")
+            sendMessageTelegram("nama "+str(new_name)+" sudah terdaftar")
             return "Nama yang diinput sudah ada"
 
     # Mengembalikan data yang sudah diperbarui
@@ -124,7 +157,7 @@ def delete_item(nama):
                
             finger.delete_model(id)
             deleteItemPicture(id)
-            bot.send_message("5499814195", "Menghapus Data User Telah Berhasil!")
+            sendMessageTelegram("Menghapus Data User Telah Berhasil!")
             
             latih_model()
             print(f"Data dengan nama {nama} dan ID {id} telah dihapus.")
@@ -248,17 +281,17 @@ def enroll_finger():
             lcdDisplay.set("Error            ",1)
             lcdDisplay.set("Store             ",2)
             print("Bad storage location")
-            bot.send_message("5499814195", "Error Menambahkan data sidik jari")
+            sendMessageTelegram("Error Menambahkan data sidik jari")
         elif i == adafruit_fingerprint.FLASHERR:
             lcdDisplay.set("Error             ",1)
             lcdDisplay.set("Store            ",2)
             print("Flash storage error")
-            bot.send_message("5499814195", "Error Menambahkan data sidik jari")
+            sendMessageTelegram("Error Menambahkan data sidik jari")
         else:
             lcdDisplay.set("Error            ",1)
             lcdDisplay.set("Store            ",2)
             print("Other error")
-            bot.send_message("5499814195", "Error Menambahkan data sidik jari")
+            sendMessageTelegram("Error Menambahkan data sidik jari")
         return False
 
 def get_fingerprint():
@@ -284,7 +317,7 @@ def get_fingerprint():
                 threading.Thread(target=relayAction).start()
             
             if GPIO.event_detected(vibration_pin):
-                bot.send_message("5499814195", "Ada yang mencoba untuk mendobrak pintu")
+                sendMessageTelegram("Ada yang mencoba untuk mendobrak pintu")
                 print("dobrak pintu")
                 statusVibration = True
                 vibration_start_time = time.time()
@@ -305,7 +338,7 @@ def get_fingerprint():
                 distance = pulse_duration * 17150
 
                 if distance < 5: #jarak ultrasonic satuan cm
-                    bot.send_message("5499814195", "Pintu berhasil dibobol")
+                    sendMessageTelegram("Pintu berhasil dibobol")
                     print("pintu dibobol")
                 
                 if time.time() - vibration_start_time >= 10: #durasi aktif sensor ultrasonic satuan detik
@@ -320,12 +353,12 @@ def get_fingerprint():
                 lcdDisplay.set("Registered       ",2)
                 time.sleep(1.5)
                 print("Citra Sidik Jari berantakan")
-                bot.send_message("5499814195", "Jari tidak terdaftar")
+                sendMessageTelegram("Jari tidak terdaftar")
                 get_fingerprint()
             print("Searching...")
             if finger.finger_search() != adafruit_fingerprint.OK:
                 print("Sidik jari tidak terdaftar")
-                bot.send_message("5499814195", "Jari tidak terdaftar")
+                sendMessageTelegram("Jari tidak terdaftar")
                 lcdDisplay.set("Finger is not    ",1)
                 lcdDisplay.set("Registered       ",2)
                 time.sleep(1.5)
@@ -334,7 +367,7 @@ def get_fingerprint():
             namaJari = searchDataJson(finger.finger_id)
             print("Sidik jari terdeteksi")
             print("ID:", finger.finger_id, "Confidence:", finger.confidence)
-            bot.send_message("5499814195", "atas nama "+str(namaJari)+" melakukan authentication Fingerprint")
+            sendMessageTelegram("atas nama "+str(namaJari)+" melakukan authentication Fingerprint")
             lcdDisplay.set("Finger is       ",1)
             lcdDisplay.set("Registered      ",2)
             time.sleep(1.5)
@@ -342,7 +375,7 @@ def get_fingerprint():
             GLOBAL_ID_USER_FINGER = int(finger.finger_id)
             return True
     except Exception as e:
-        bot.send_message("5499814195", "Terjadi Error DI get_fingerprint")
+        sendMessageTelegram("Terjadi Error DI get_fingerprint")
         print("error = "+str(e))
     
 # Fungsi untuk mengambil gambar data
@@ -361,7 +394,7 @@ def ambil_gambar():
             finger.delete_model(id)
         except Exception as e:
             print("Error Delete Finger "+str(e))
-            bot.send_message("5499814195", "Terjadi Error delete finger")
+            sendMessageTelegram("Terjadi Error delete finger")
         return False
 
     a = 0
@@ -370,12 +403,12 @@ def ambil_gambar():
 
         if not check:
             print("Gagal membaca frame.")
-            bot.send_message("5499814195", "Gagal Membaca Frame")
+            sendMessageTelegram("Gagal Membaca Frame")
             try:
                 finger.delete_model(id)
             except Exception as e:
                 print("Error Delete Finger "+str(e))
-                bot.send_message("5499814195", "Terjadi Error delete finger")
+                sendMessageTelegram("Terjadi Error delete finger")
             break
 
         abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -402,7 +435,7 @@ def ambil_gambar():
     latih_model()
     add_new_data()
     print("fungsi ambil gambar berakhir")
-    bot.send_message("5499814195", "Penambahan Data User Telah Berhasil!")
+    sendMessageTelegram("Penambahan Data User Telah Berhasil!")
     lcdDisplay.set("Take Picture     ",1)
     lcdDisplay.set("Successfully     ",2)
     
@@ -499,8 +532,8 @@ def authCamera():
                     
                     if takeName is not False:
                         cv2.imwrite('detected_face.jpg', detected_face)
-                        bot.send_photo("5499814195", photo=open('detected_face.jpg', 'rb'))
-                        bot.send_message("5499814195", "Atas nama " + takeName + " melakukan authentication muka")
+                        sendPhotoTelegram()
+                        sendMessageTelegram("Atas nama " + takeName + " melakukan authentication muka")
                         status = True
                         if not relay_status:
                             lcdDisplay.set("Authentication  ",1)
@@ -511,8 +544,8 @@ def authCamera():
                         break
                     else:
                         cv2.imwrite('detected_face.jpg', detected_face)
-                        bot.send_photo("5499814195", photo=open('detected_face.jpg', 'rb'))
-                        bot.send_message("5499814195", "terjadi kesalahan Data muka tidak ditemukan")
+                        sendPhotoTelegram()
+                        sendMessageTelegram("terjadi kesalahan Data muka tidak ditemukan")
                         lcdDisplay.set("Authentication",1)
                         lcdDisplay.set("Failed",2)
                         break
@@ -521,7 +554,7 @@ def authCamera():
 
         # Deteksi gerakan
         if GPIO.event_detected(vibration_pin):
-            bot.send_message("5499814195", "Ada yang mencoba untuk mendobrak pintu")
+            sendMessageTelegram("Ada yang mencoba untuk mendobrak pintu")
             print("dobrak pintu")
             statusVibration = True
             vibration_start_time = time.time()
@@ -542,7 +575,7 @@ def authCamera():
             distance = pulse_duration * 17150
 
             if distance < 5: #jarak ultrasonic satuan cm
-                bot.send_message("5499814195", "Pintu berhasil dibobol")
+                sendMessageTelegram("Pintu berhasil dibobol")
                 print("pintu dibobol")
             
             if time.time() - vibration_start_time >= 10:
@@ -588,19 +621,19 @@ def authentication():
             lcdDisplay.set("Successfully     ",2)
             threading.Thread(target=relayAction).start()
             takeName = searchDataJson(int(GLOBAL_ID_USER_FACE))
-            bot.send_message("5499814195", "atas nama "+str(takeName)+" memasuki ruangan")
+            sendMessageTelegram("atas nama "+str(takeName)+" memasuki ruangan")
             time.sleep(1.5)
         else:
             lcdDisplay.set("Authentication   ",1)
             lcdDisplay.set("Failed           ",2)
-            bot.send_message("5499814195", "Sidik jari dengan Muka tidak sama")
+            sendMessageTelegram("Sidik jari dengan Muka tidak sama")
             time.sleep(1.5)
         checkFile()
     else:
         print("user finger = " + str(GLOBAL_ID_USER_FINGER))
         print("user face = " + str(GLOBAL_ID_USER_FACE))
         if not GLOBAL_STOP_LOOP:
-            bot.send_message("5499814195", "Data sidik jari dan muka tidak sesuai")
+            sendMessageTelegram("Data sidik jari dan muka tidak sesuai")
             lcdDisplay.set("Authentication   ",1)
             lcdDisplay.set("is Failed        ",2)
             time.sleep(1.5)
@@ -608,7 +641,7 @@ def authentication():
         else:
             lcdDisplay.set("Stop            ",1)
             lcdDisplay.set("Service         ",2)
-            bot.send_message("5499814195", "Stop Service!!")
+            sendMessageTelegram("Stop Service!!")
 
 
 @bot.message_handler(commands=['startService'])
@@ -684,17 +717,28 @@ def echo_all(message):
     """
     bot.reply_to(message, reply_message)
     
-reply_message = """
-    Smart Doorlock System is running!
-
-    /startService = for start service authentication
-    /stopService = for stop service authentication
-    /addUser = for add new User authentication
-    /removeUser = for remove User authentication
-    /listUser = for see all user authentication
-    """
-bot.send_message("5499814195", reply_message)
 #checkFile()
 
 GPIO.output(relay_pin, GPIO.LOW)
-bot.infinity_polling()
+while True:
+    if checkConnection():
+    # Kode untuk menjalankan bot Telegram
+        print("Bot is running...")
+        try:
+            reply_message = """
+            Smart Doorlock System is running!
+            
+            /startService = for start service authentication
+            /stopService = for stop service authentication
+            /addUser = for add new User authentication
+            /removeUser = for remove User authentication
+            /listUser = for see all user authentication
+            """
+            bot.reply_to("5499814195", reply_message)
+            bot.infinity_polling()
+        except Exception as e:
+            print("Error")
+        # ...
+    else:
+        print("No internet connection. Retrying in 5 seconds...")
+    time.sleep(5)
