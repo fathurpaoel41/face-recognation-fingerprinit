@@ -720,25 +720,35 @@ def echo_all(message):
 #checkFile()
 
 GPIO.output(relay_pin, GPIO.LOW)
-while True:
-    if checkConnection():
-    # Kode untuk menjalankan bot Telegram
-        print("Bot is running...")
-        try:
-            reply_message = """
-            Smart Doorlock System is running!
-            
-            /startService = for start service authentication
-            /stopService = for stop service authentication
-            /addUser = for add new User authentication
-            /removeUser = for remove User authentication
-            /listUser = for see all user authentication
-            """
-            bot.reply_to("5499814195", reply_message)
-            bot.infinity_polling()
-        except Exception as e:
-            print("Error")
-        # ...
-    else:
-        print("No internet connection. Retrying in 5 seconds...")
-    time.sleep(5)
+    
+def run_bot():
+    while True:
+        if checkConnection():
+            print("Bot is running...")
+            sendMessageTelegram("Bot Is Running!")
+            try:
+                reply_message = """
+                Smart Doorlock System is running!
+                
+                /startService = for start service authentication
+                /stopService = for stop service authentication
+                /addUser = for add new User authentication
+                /removeUser = for remove User authentication
+                /listUser = for see all user authentication
+                """
+                bot.reply_to("5499814195", reply_message)
+                bot.infinity_polling()
+            except Exception as e:
+                print("Error")
+            # ...
+        else:
+            print("No internet connection. Retrying in 5 seconds...")
+        time.sleep(5)
+
+if __name__ == '__main__':
+    # Create a thread for running the bot
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.start()
+
+    # Run the testing function in the main thread
+    checkFile()
