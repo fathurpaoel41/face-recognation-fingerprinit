@@ -385,7 +385,8 @@ def ambil_gambar():
     lcdDisplay.set("                 ",2)
     camera = 0
     video = cv2.VideoCapture(camera)
-    faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_alt2.xml')
+    eye_cascade = cv2.CascadeClassifier('haarcascade_eye.xml') 
     id = GLOBAL_ADD_NEW_ID_USER
 
     if not video.isOpened():
@@ -412,22 +413,28 @@ def ambil_gambar():
             break
 
         abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        wajah = faceDeteksi.detectMultiScale(abu, 1.3, 5)
+        wajah = faceDeteksi.detectMultiScale(abu, 1.2, 4)
 
         for (x, y, w, h) in wajah:
-            a = a + 1
+           
             wajah_cropped = frame[y:y+h, x:x+w]
+            
+            # Simpan gambar menggunakan imwrite
+            eyes = eye_cascade.detectMultiScale(wajah_cropped)
 
             # Simpan gambar dengan menggunakan ID bilangan bulat
-            cv2.imwrite('DataSet/User.' + str(id) + '.' + str(a) + '.jpg', wajah_cropped)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            print("masuk")
-            lcdDisplay.set("Take Picture        ",1)
-            lcdDisplay.set(str(a)+"             ",2)
+            for (ex,ey,ew,eh) in eyes:
+                cv2.rectangle(frame,(x+ex,y+ey),(x+ex+ew,y+ey+eh),(0,255,0),2)
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                cv2.imwrite('DataSet/User.' + str(id) + '.' + str(a) + '.jpg', wajah_cropped)
+                print("masuk")
+                lcdDisplay.set("Take Picture        ",1)
+                lcdDisplay.set(str(a)+"             ",2)
+                a = a + 1
 
-        cv2.imshow("Face Recognition", frame)
+        #cv2.imshow("Face Recognition", frame)
 
-        if a > 50: #value untuk melakukan berapa kali gambar data latih
+        if a > 30: #value untuk melakukan berapa kali gambar data latih
             break
 
     video.release()
@@ -444,7 +451,7 @@ def ambil_gambar():
 def latih_model():
     print("masuk fungsi latih model")
     recognizer = cv2.face_LBPHFaceRecognizer.create()
-    detector = cv2.CascadeClassifier("haarcascade_frontalface_default.xml")
+    detector = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
 
     def getImagesWithLabels(path):
         imagePaths = [os.path.join(path, f) for f in os.listdir(path)]
@@ -494,7 +501,7 @@ def authCamera():
     
     camera = 0
     video = cv2.VideoCapture(camera)
-    faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
+    faceDeteksi = cv2.CascadeClassifier('haarcascade_frontalface_alt2.xml')
     recognizer = cv2.face_LBPHFaceRecognizer.create()
     recognizer.read('training.xml')
     a = 0
@@ -510,7 +517,7 @@ def authCamera():
         a = a + 1
         check, frame = video.read()
         abu = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        wajah = faceDeteksi.detectMultiScale(abu, 1.3, 5)
+        wajah = faceDeteksi.detectMultiScale(abu, 1.2, 4)
         
         #untuk button buka
         inputValue = GPIO.input(21)
@@ -533,13 +540,13 @@ def authCamera():
                     if takeName is not False:
                         cv2.imwrite('detected_face.jpg', detected_face)
                         sendPhotoTelegram()
-                        sendMessageTelegram("Atas nama " + takeName + " melakukan authentication muka")
+                        conf = "{0}%".format(round(100-conf))
+                        sendMessageTelegram("Atas nama " + takeName + " melakukan authentication muka. dengan Akurasi = "+str(conf))
                         status = True
                         if not relay_status:
                             lcdDisplay.set("Authentication  ",1)
                             lcdDisplay.set("Success         ",2)
                             GLOBAL_AUTH_FACE = True
-                            threading.Thread(target=relayAction).start()
                             GLOBAL_ID_USER_FACE = int(id)
                         break
                     else:
@@ -736,8 +743,9 @@ def run_bot():
                 /removeUser = for remove User authentication
                 /listUser = for see all user authentication
                 """
-                bot.reply_to("5499814195", reply_message)
+                sendMessageTelegram(reply_message)
                 bot.infinity_polling()
+                break
             except Exception as e:
                 print("Error")
             # ...
