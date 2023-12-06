@@ -20,7 +20,7 @@ uart = serial.Serial("/dev/ttyS0", baudrate=57600, timeout=1)
 finger = adafruit_fingerprint.Adafruit_Fingerprint(uart)
 
 # Inisialisasi bot Telegram
-bot = telebot.TeleBot("6354339926:AAGJt4Mxbe5hxdDMnIlhQSkLsNP286f46rM")
+bot = telebot.TeleBot("6309649328:AAFBJau81pJlNDRik9D6bYbJL-ERvh099h4")
 
 # Konfigurasi pin GPIO
 relay_pin = 27
@@ -109,12 +109,12 @@ def check_id(new_name):
     data = None
     with open('data.json', 'r') as f:
         data = json.load(f)
-    new_id = random.randint(1, 200)
+    new_id = random.randint(1, 100)
 
     # Mengecek apakah ID atau nama sudah ada dalam data
     for item in data:
         while item['id'] == new_id:
-            new_id = random.randint(1, 200)
+            new_id = random.randint(1, 100)
         if item['nama'].lower() == new_name.lower():
             sendMessageTelegram("nama "+str(new_name)+" sudah terdaftar")
             return "Nama yang diinput sudah ada"
@@ -376,7 +376,9 @@ def get_fingerprint():
             return True
     except Exception as e:
         sendMessageTelegram("Terjadi Error DI get_fingerprint")
+        sendMessageTelegram("error = "+str(e))
         print("error = "+str(e))
+        GLOBAL_STOP_LOOP = True
     
 # Fungsi untuk mengambil gambar data
 def ambil_gambar():
